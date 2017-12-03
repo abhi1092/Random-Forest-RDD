@@ -54,8 +54,8 @@ def RDD_cross_validation_split(dataset, n_folds):
     fold_size = int(dataset.count() / n_folds)
     for i in range(n_folds):
         indexes = random.sample(range(0, dataset.count()), fold_size)
-        fold = dataset_indexed.filter(lambda foo: foo[1] in indexes)
-        fold = fold.map(lambda foo: foo[0])
+        fold = dataset_indexed.filter(lambda foo: foo[1] in indexes).map(lambda foo: foo[0])
+        fold.cache()
         dataset_split.append(fold)
     return dataset_split
 
@@ -83,6 +83,7 @@ def RDD_accuracy_metric(actual, predicted):
 def evaluate_algorithm(dataset, algorithm, n_folds, *args):
     folds = cross_validation_split(dataset, n_folds)
     scores = list()
+
     for fold in folds:
         train_set = list(folds)
         train_set.remove(fold)
@@ -112,6 +113,7 @@ def RDD_evaluate_algorithm(dataset, algorithm, n_folds, *args):
         actual = fold.map(lambda row: row[-1])
         accuracy = RDD_accuracy_metric(actual, predicted)
         scores.append(accuracy)
+        break
     return scores
 
 # Split a dataset based on an attribute and an attribute value
@@ -128,12 +130,14 @@ def test_split(index, value, dataset):
 def RDD_test_split(index, value, dataset):
     start_time_left = time.time()
     left = dataset.filter(lambda x: x[index] <= value)
-    print("size of left size ",left.count())
-    print("---Time for left split %s seconds ---" % (time.time() - start_time_left))
+    left.cache()
+    # print("size of left size ",left.count())
+    # print("---Time for left split %s seconds ---" % (time.time() - start_time_left))
     start_time_right = time.time()
     right = dataset.filter(lambda x: x[index] > value)
-    print("size of right size ", right.count())
-    print("---Time for right split %s seconds ---" % (time.time() - start_time_right))
+    right.cache()
+    # print("size of right size ", right.count())
+    # print("---Time for right split %s seconds ---" % (time.time() - start_time_right))
     return left, right
 
 # Calculate the Gini index for a split dataset
@@ -209,11 +213,12 @@ def RDD_get_split(dataset, n_features, name):
             features.append(index)
 
     list_dataset = dataset.collect()
-
+    inx = n_features
     for index in features:
         idx = 0
         for row in list_dataset:
-            print(n_features,idx)
+            print(inx,idx)
+
             idx += 1
             start_time_RDD_test_split = time.time()
 
@@ -225,6 +230,7 @@ def RDD_get_split(dataset, n_features, name):
             print("gini score of current split ", gini)
             if gini < b_score:
                 b_index, b_value, b_score, b_groups = index, row[index], gini, groups
+        inx -= 1
     return {'index':b_index, 'value':b_value, 'groups':b_groups}
 
 
@@ -268,24 +274,27 @@ def split(node, max_depth, min_size, n_features, depth):
 # Create child splits for a node or make terminal
 def RDD_split(node, max_depth, min_size, n_features, depth):
     left, right = node['groups']
-    print(depth)
     del (node['groups'])
+    left_count = left.count()
+    right_count = right.count()
     # check for a no split
-    if left.count() == 0 or right.count() == 0:
+    if left_count == 0 or right_count == 0:
+        print("Stopping due to zero count",left_count,right_count)
         node['left'] = node['right'] = RDD_to_terminal( sc.union([left,right]) )
         return
     # check for max depth
     if depth >= max_depth:
+        print("Stopping due to max dept")
         node['left'], node['right'] = RDD_to_terminal(left), RDD_to_terminal(right)
         return
     # process left child
-    if left.count() <= min_size:
+    if left_count <= min_size:
         node['left'] = RDD_to_terminal(left)
     else:
         node['left'] = RDD_get_split(left, n_features,'left')
         RDD_split(node['left'], max_depth, min_size, n_features, depth + 1)
     # process right child
-    if right.count() <= min_size:
+    if right_count <= min_size:
         node['right'] = RDD_to_terminal(right)
     else:
         node['right'] = RDD_get_split(right, n_features,'right')
@@ -294,7 +303,6 @@ def RDD_split(node, max_depth, min_size, n_features, depth):
 # Build a decision tree
 def build_tree(train, max_depth, min_size, n_features):
     root = get_split(train, n_features)
-    exit()
     split(root, max_depth, min_size, n_features, 1)
     return root
 
@@ -302,6 +310,7 @@ def build_tree(train, max_depth, min_size, n_features):
 # Build a decision tree
 def RDD_build_tree(train, max_depth, min_size, n_features):
     root = RDD_get_split(train, n_features,'root')
+    print("After root in RDD build tree**************************")
     RDD_split(root, max_depth, min_size, n_features, 1)
     return root
 
@@ -330,11 +339,13 @@ def subsample(dataset, ratio):
 
 # Create a random subsample from the dataset with replacement
 def RDD_subsample(dataset, ratio):
-    n_sample = int(round(dataset.count() * ratio))
+    dataset_count = dataset.count()
+    n_sample = int(round(dataset_count * ratio))
     dataset_indexed = dataset.zipWithIndex()
-    indexes = random.sample(range(0, dataset.count()), n_sample)
+    indexes = random.sample(range(0, dataset_count), n_sample)
     sample = dataset_indexed.filter(lambda foo: foo[1] in indexes)
     sample = sample.map(lambda row: row[0])
+    sample.cache()
     return sample
 
 # Make a prediction with a list of bagged trees
@@ -355,12 +366,16 @@ def random_forest(train, test, max_depth, min_size, sample_size, n_trees, n_feat
 # Random Forest Algorithm
 def RDD_random_forest(train, test, max_depth, min_size, sample_size, n_trees, n_features):
     trees = list()
-    for i in range(n_trees):
-        sample = RDD_subsample(train, sample_size)
 
-        tree = RDD_build_tree(sample, max_depth, min_size, n_features)
+    sample = RDD_subsample(train, sample_size)
+    tree = RDD_build_tree(sample, max_depth, min_size, n_features)
+    trees.append(tree)
 
-        trees.append(tree)
+    # for i in range(n_trees):
+    #     print("tree : ",i)
+    #     sample = RDD_subsample(train, sample_size)
+    #     tree = RDD_build_tree(sample, max_depth, min_size, n_features)
+    #     trees.append(tree)
     predictions = test.map(lambda row: bagging_predict(trees, row))
     return(predictions)
 
@@ -391,7 +406,8 @@ for i in indexs:
     data2.append(data[i])
 inputData = sc.parallelize(data2)
 
-inputData = inputData.map(label_to_int).cache()
+inputData = inputData.map(label_to_int)
+inputData.cache()
 # convert string attributes to integers
 for i in range(0, len(dataset[0])-1):
     str_column_to_float(dataset, i)
@@ -399,17 +415,17 @@ for i in range(0, len(dataset[0])-1):
 str_column_to_int(dataset, len(dataset[0])-1)
 # evaluate algorithm
 n_folds = 5
-max_depth = 10
+max_depth = 3
 min_size = 1
 sample_size = 1.0
 
 # n_features = int(sqrt(len(dataset[0])-1))
 n_features = 3
 for n_trees in [1]:
-    scores = evaluate_algorithm(dataset, random_forest, n_folds, max_depth, min_size, sample_size, n_trees, n_features)
+    # scores = evaluate_algorithm(dataset, random_forest, n_folds, max_depth, min_size, sample_size, n_trees, n_features)
     scores_RDD = RDD_evaluate_algorithm(inputData, RDD_random_forest, n_folds, max_depth, min_size, sample_size, n_trees, n_features)
     print('Trees: %d' % n_trees)
-    print('Scores: %s' % scores)
-    # print('Scores_RDD: %s' % scores_RDD)
-    print('Mean Accuracy: %.3f%%' % (sum(scores)/float(len(scores))))
-    # print('Mean Accuracy_RDD: %.3f%%' % (sum(scores_RDD) / float(len(scores_RDD))))
+    # print('Scores: %s' % scores)
+    print('Scores_RDD: %s' % scores_RDD)
+    # print('Mean Accuracy: %.3f%%' % (sum(scores)/float(len(scores))))
+    print('Mean Accuracy_RDD: %.3f%%' % (sum(scores_RDD) / float(len(scores_RDD))))
