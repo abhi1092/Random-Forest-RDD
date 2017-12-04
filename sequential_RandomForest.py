@@ -3,7 +3,7 @@ from random import seed
 from random import randrange
 from csv import reader
 from math import sqrt
-
+import time
 # Load a CSV file
 def load_csv(filename):
 	dataset = list()
@@ -208,7 +208,10 @@ min_size = 1
 sample_size = 1.0
 n_features = int(sqrt(len(dataset[0])-1))
 for n_trees in [1, 5, 10]:
+	start_time = time.time()
 	scores = evaluate_algorithm(dataset, random_forest, n_folds, max_depth, min_size, sample_size, n_trees, n_features)
 	print('Trees: %d' % n_trees)
 	print('Scores: %s' % scores)
 	print('Mean Accuracy: %.3f%%' % (sum(scores)/float(len(scores))))
+	# Time
+	print("------------Time taken to train %s" % (time.time() - start_time))
