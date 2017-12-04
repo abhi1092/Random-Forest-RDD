@@ -98,7 +98,7 @@ def evaluate_algorithm(dataset, algorithm, n_folds, *args):
         actual = [row[-1] for row in fold]
         accuracy = accuracy_metric(actual, predicted)
         scores.append(accuracy)
-        print("------------Time taken to train %s" % (time.time() - start_time), fold_no  )
+        # print("------------Time taken to train %s" % (time.time() - start_time), fold_no  )
         fold_no += 1
     return scores
 
@@ -215,6 +215,7 @@ def RDD_get_split(dataset, n_features, name):
         if index not in features:
             features.append(index)
     dataset_RDD = sc.parallelize(dataset)
+    dataset_RDD.cache()
     for index in features:
         # Contains list of tuples of all the processed rows
         results = dataset_RDD.map(lambda x: get_best_split(x, index, class_values)).collect()
@@ -302,7 +303,6 @@ def RDD_split(node, max_depth, min_size, n_features, depth):
 # Build a decision tree
 def build_tree(train, max_depth, min_size, n_features):
     root = get_split(train, n_features)
-    exit(0)
     split(root, max_depth, min_size, n_features, 1)
     return root
 
@@ -367,16 +367,11 @@ def random_forest(train, test, max_depth, min_size, sample_size, n_trees, n_feat
 def RDD_random_forest(train, test, max_depth, min_size, sample_size, n_trees, n_features):
     trees = list()
 
-    sample = subsample(train, sample_size)
-    tree = RDD_build_tree(sample, max_depth, min_size, n_features)
-    trees.append(tree)
-
-    # for i in range(n_trees):
-    #     print("tree : ",i)
-    #     sample = RDD_subsample(train, sample_size)
-    #     tree = RDD_build_tree(sample, max_depth, min_size, n_features)
-    #     trees.append(tree)
-    # predictions = test.map(lambda row: bagging_predict(trees, row))
+    for i in range(n_trees):
+        # print("tree : ",i)
+        sample = subsample(train, sample_size)
+        tree = RDD_build_tree(sample, max_depth, min_size, n_features)
+        trees.append(tree)
     predictions = [bagging_predict(trees, row) for row in test]
     return(predictions)
 
@@ -423,7 +418,8 @@ sample_size = 1.0
 
 # n_features = int(sqrt(len(dataset[0])-1))
 n_features = 3
-for n_trees in [1]:
+for n_trees in [1, 5, 10]:
+    start_time = time.time()
     # scores = evaluate_algorithm(dataset, random_forest, n_folds, max_depth, min_size, sample_size, n_trees, n_features)
     scores_RDD = evaluate_algorithm(dataset, RDD_random_forest, n_folds, max_depth, min_size, sample_size, n_trees, n_features)
     print('Trees: %d' % n_trees)
@@ -431,3 +427,5 @@ for n_trees in [1]:
     print('Scores_RDD: %s' % scores_RDD)
     # print('Mean Accuracy: %.3f%%' % (sum(scores)/float(len(scores))))
     print('Mean Accuracy_RDD: %.3f%%' % (sum(scores_RDD) / float(len(scores_RDD))))
+    # Time
+    print("------------Time taken to train %s" % (time.time() - start_time) )
