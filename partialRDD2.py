@@ -207,35 +207,31 @@ def get_split(dataset, n_features):
 
 # Select the best split point for a dataset
 def RDD_get_split(dataset, n_features, name):
-    class_values = list(set(dataset.map(lambda row: row[-1]).collect()))
+    class_values = list(set(row[-1] for row in dataset))
     b_index, b_value, b_score, b_groups = 999, 999, 999, None
     features = list()
     while len(features) < n_features:
-        index = randrange(len(dataset.first())-1)
+        index = randrange(len(dataset[0]) - 1)
         if index not in features:
             features.append(index)
-
-    list_dataset = dataset.collect()
-    inx = n_features
+    dataset_RDD = sc.parallelize(dataset)
     for index in features:
+        # Contains list of tuples of all the processed rows
+        results = dataset_RDD.map(lambda x: get_best_split(x, index, class_values)).collect()
+        score = 0
         idx = 0
-        for row in list_dataset:
-            # print(inx,idx)
+        # select row from results such that it has maximum gini score
+        for i in range(len(results)):
+            if results[i][2] > score:
+                idx = i
 
-            idx += 1
-            start_time_RDD_test_split = time.time()
+    return {'index': results[idx][0], 'value': results[idx][1], 'groups': results[idx][3]}
 
-            groups = RDD_test_split(index, row[index], dataset)
-            # print("---Function RDD_test_split %s seconds ---" % (time.time() - start_time_RDD_test_split),name)
-            start_time_RDD_gini_index = time.time()
-            gini = RDD_gini_index(groups, class_values)
-            # print("---Function RDD_gini_index %s seconds ---" % (time.time() - start_time_RDD_gini_index),name)
-            # print("gini score of current split ", gini)
-            if gini < b_score:
-                b_index, b_value, b_score, b_groups = index, row[index], gini, groups
-        inx -= 1
-    return {'index':b_index, 'value':b_value, 'groups':b_groups}
 
+def get_best_split(row, index, class_values):
+    groups = test_split(index, row[index], dataset)
+    gini = gini_index(groups, class_values)
+    return (index, row[index], gini, groups)
 
 # Create a terminal node value
 def to_terminal(group):
@@ -306,16 +302,16 @@ def RDD_split(node, max_depth, min_size, n_features, depth):
 # Build a decision tree
 def build_tree(train, max_depth, min_size, n_features):
     root = get_split(train, n_features)
+    exit(0)
     split(root, max_depth, min_size, n_features, 1)
     return root
 
 
 # Build a decision tree
 def RDD_build_tree(train, max_depth, min_size, n_features):
-    train = sc.parallelize(train)
     root = RDD_get_split(train, n_features,'root')
     # print("After root in RDD build tree**************************")
-    RDD_split(root, max_depth, min_size, n_features, 1)
+    split(root, max_depth, min_size, n_features, 1)
     return root
 
 # Make a prediction with a decision tree
