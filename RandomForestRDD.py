@@ -393,6 +393,7 @@ dataset = load_csv(filename)
 sc = SparkContext(appName="RandomForest")
 inputData = sc.textFile(sys.argv[1])
 inputData = inputData.map(lambda line: line.split(',')).map(lambda row: [float(x) for x in row[:-1]] + [row[-1]])
+inputData.cache()
 label = set(inputData.map(lambda row: row[-1]).collect())
 lookup = {}
 for i, value in enumerate(label):
