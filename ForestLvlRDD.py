@@ -422,6 +422,7 @@ sample_size = 1.0
 n_features = int(sqrt(len(dataset[0])-1))
 
 for n_trees in [1, 5, 10]:
+    start_time = time.time()
     # scores = evaluate_algorithm(dataset, random_forest, n_folds, max_depth, min_size, sample_size, n_trees, n_features)
     scores_RDD = evaluate_algorithm(dataset, RDD_random_forest, n_folds, max_depth, min_size, sample_size, n_trees, n_features)
     print('Trees: %d' % n_trees)
@@ -429,3 +430,5 @@ for n_trees in [1, 5, 10]:
     print('Scores_RDD: %s' % scores_RDD)
     # print('Mean Accuracy: %.3f%%' % (sum(scores)/float(len(scores))))
     print('Mean Accuracy_RDD: %.3f%%' % (sum(scores_RDD) / float(len(scores_RDD))))
+    # Time
+    print("------------Time taken to train %s" % (time.time() - start_time))
