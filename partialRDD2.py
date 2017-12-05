@@ -11,7 +11,7 @@ import time
 def load_csv(filename):
     dataset = list()
     with open(filename, 'r') as file:
-        csv_reader = reader(file)
+        csv_reader = reader(file, delimiter=' ')
         for row in csv_reader:
             if not row:
                 continue
@@ -375,36 +375,16 @@ def RDD_random_forest(train, test, max_depth, min_size, sample_size, n_trees, n_
     predictions = [bagging_predict(trees, row) for row in test]
     return(predictions)
 
-def label_to_int(row):
-    row[-1] = lookup[row[-1]]
-    return row
-
 # Test the random forest algorithm
 seed(2)
 # load and prepare data
-filename = 'sonar.all-data.csv'
+# filename = 'sonar.all-data.csv'
+filename = 'shuttle.tst'
 dataset = load_csv(filename)
 
 # Prepare data in RDD
 sc = SparkContext(appName="RandomForest")
-inputData = sc.textFile(sys.argv[1])
-inputData = inputData.map(lambda line: line.split(',')).map(lambda row: [float(x) for x in row[:-1]] + [row[-1]])
-inputData.cache()
-label = set(inputData.map(lambda row: row[-1]).collect())
-lookup = {}
-for i, value in enumerate(label):
-    lookup[value] = i
 
-
-data = inputData.collect()
-indexs = random.sample(range(0,len(data)),10)
-data2 = []
-for i in indexs:
-    data2.append(data[i])
-inputData = sc.parallelize(data2)
-
-inputData = inputData.map(label_to_int)
-inputData.cache()
 # convert string attributes to integers
 for i in range(0, len(dataset[0])-1):
     str_column_to_float(dataset, i)

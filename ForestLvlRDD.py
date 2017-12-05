@@ -11,7 +11,7 @@ import time
 def load_csv(filename):
     dataset = list()
     with open(filename, 'r') as file:
-        csv_reader = reader(file)
+        csv_reader = reader(file, delimiter=' ')
         for row in csv_reader:
             if not row:
                 continue
@@ -402,7 +402,8 @@ def RDD_random_forest(train, test, max_depth, min_size, sample_size, n_trees, n_
 # Test the random forest algorithm
 seed(2)
 # load and prepare data
-filename = 'sonar.all-data.csv'
+# filename = 'sonar.all-data.csv'
+filename = 'shuttle.tst'
 dataset = load_csv(filename)
 
 # Prepare data in RDD
