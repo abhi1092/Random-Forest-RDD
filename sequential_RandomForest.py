@@ -131,7 +131,7 @@ def to_terminal(group):
 # Create child splits for a node or make terminal
 def split(node, max_depth, min_size, n_features, depth):
 	left, right = node['groups']
-	print("At depth: ",depth)
+	# print("At depth: ",depth)
 	del(node['groups'])
 	# check for a no split
 	if not left or not right:
