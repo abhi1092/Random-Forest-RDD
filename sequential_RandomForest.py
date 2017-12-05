@@ -8,7 +8,7 @@ import time
 def load_csv(filename):
 	dataset = list()
 	with open(filename, 'r') as file:
-		csv_reader = reader(file)
+		csv_reader = reader(file, delimiter=' ')
 		for row in csv_reader:
 			if not row:
 				continue
@@ -25,6 +25,7 @@ def str_column_to_int(dataset, column):
 	class_values = [row[column] for row in dataset]
 	unique = set(class_values)
 	lookup = dict()
+
 	for i, value in enumerate(unique):
 		lookup[value] = i
 	for row in dataset:
@@ -193,21 +194,34 @@ def random_forest(train, test, max_depth, min_size, sample_size, n_trees, n_feat
 
 # Test the random forest algorithm
 seed(2)
+
+
+
 # load and prepare data
-filename = 'sonar.all-data.csv'
+# filename = 'sonar.all-data.csv'
+filename = 'shuttle.tst'
 dataset = load_csv(filename)
 # convert string attributes to integers
 for i in range(0, len(dataset[0])-1):
 	str_column_to_float(dataset, i)
 # convert class column to integers
 str_column_to_int(dataset, len(dataset[0])-1)
+
+
+
+
+
+
+
+
+
 # evaluate algorithm
 n_folds = 5
 max_depth = 10
 min_size = 1
 sample_size = 1.0
 n_features = int(sqrt(len(dataset[0])-1))
-for n_trees in [1, 5, 10]:
+for n_trees in [1]:
 	start_time = time.time()
 	scores = evaluate_algorithm(dataset, random_forest, n_folds, max_depth, min_size, sample_size, n_trees, n_features)
 	print('Trees: %d' % n_trees)
