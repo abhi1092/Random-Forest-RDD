@@ -384,7 +384,11 @@ seed(2)
 # filename = 'sonar.all-data.csv'
 filename = 'shuttle.tst'
 dataset = load_csv(filename)
-
+indexes = random.sample(range(0,len(dataset)),3000)
+dataset2 = []
+for i in indexes:
+	dataset2.append(dataset[i])
+dataset = dataset2
 # Prepare data in RDD
 sc = SparkContext(appName="RandomForest")
 
@@ -393,7 +397,7 @@ for i in range(0, len(dataset[0])-1):
     str_column_to_float(dataset, i)
 # convert class column to integers
 str_column_to_int(dataset, len(dataset[0])-1)
-dataset = dataset[:3000]
+
 # evaluate algorithm
 n_folds = 5
 max_depth = 3

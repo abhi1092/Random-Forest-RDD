@@ -5,6 +5,7 @@ Sequential code for Random forest using decision tree for classification
 from random import seed
 from random import randrange
 from csv import reader
+import random
 from math import sqrt
 import time
 # Load a CSV file
@@ -205,13 +206,21 @@ seed(2)
 # filename = 'sonar.all-data.csv'
 filename = 'shuttle.tst'
 dataset = load_csv(filename)
+
 # convert string attributes to integers
+indexes = random.sample(range(0,len(dataset)),3000)
+dataset2 = []
+for i in indexes:
+	dataset2.append(dataset[i])
+dataset = dataset2
+
+
 for i in range(0, len(dataset[0])-1):
 	str_column_to_float(dataset, i)
 # convert class column to integers
 str_column_to_int(dataset, len(dataset[0])-1)
 
-dataset = dataset[:3000]
+
 
 
 # evaluate algorithm
