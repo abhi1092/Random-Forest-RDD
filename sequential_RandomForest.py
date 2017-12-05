@@ -211,12 +211,7 @@ for i in range(0, len(dataset[0])-1):
 # convert class column to integers
 str_column_to_int(dataset, len(dataset[0])-1)
 
-
-
-
-
-
-
+dataset = dataset[:3000]
 
 
 # evaluate algorithm
