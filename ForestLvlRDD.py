@@ -1,3 +1,7 @@
+"""
+In this file we do cross validation level parallelism. We have used RDD for various combination of train and test set to.
+Next we apply map to this RDD and train in parallel multiple trees. Final accuracy is mean of all accuracy
+"""
 # Random Forest Algorithm on Sonar Dataset
 from random import seed
 from random import randrange

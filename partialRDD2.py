@@ -1,3 +1,6 @@
+"""
+In this file we apply RDD to all rows and find the best split parallely. This parallelism is at tree level
+"""
 # Random Forest Algorithm on Sonar Dataset
 from random import seed
 from random import randrange

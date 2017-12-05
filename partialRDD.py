@@ -1,3 +1,7 @@
+"""
+In this we apply parallelism at various levels. We apply RDD for dataset dividing at 
+node building, and gini index calculation
+"""
 # Random Forest Algorithm on Sonar Dataset
 from random import seed
 from random import randrange
